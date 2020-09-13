@@ -1,6 +1,6 @@
 //
 //  main.cpp
-//  STL
+//  string
 //
 //  Created by Ajay Singh on 13/09/20.
 //  Copyright © 2020 Ajay Singh. All rights reserved.
