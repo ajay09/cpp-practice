@@ -7,9 +7,122 @@
 //
 
 #include <iostream>
+#include <string>
+#include <iomanip>  // quoted()
 
-int main(int argc, const char * argv[]) {
-    // insert code here...
-    std::cout << "Hello, World!\n";
+using namespace std;
+/*
+ >>  c++ strings don't have a null terminator.
+ >>  Though it is a sequence of characters.
+*/
+int main() {
+    {
+        // Using a character
+        string s1{1, 'a'};
+        string s2(4, '=');
+        // string(std::initializer_list<charT> ilist)
+        string s3({ 'C', '-', 's', 't', 'y', 'l', 'e' });
+        cout << s1 << endl; // "a"
+        cout << s2 << '\n'; // "===="
+        cout << s3 << '\n'; // "C-style"
+    }
+    
+    
+    {
+        // Multiple Lines
+        string multipleLines = "Hey there. "
+                               "Where have you been? "
+                               "Haven't seen you for long time.";
+        cout << multipleLines << endl;  // "Hey there. Where have you been? Haven't seen you for long time."
+    
+        
+        // Copy constructor
+        string hey(multipleLines);
+        cout << hey << endl;            // "Hey there. Where have you been? Haven't seen you for long time."
+    
+        
+        // Iterators
+        string is1(hey.begin(), hey.begin() + 10);     // [being, end)
+        string is2(hey.rbegin(), hey.rbegin() + 9);       // (rend, rbegin]
+        cout << is1 << endl;    // "Hey there."
+        cout << is2 << endl;    // "emit gnol"
+    }
+    
+    
+    {
+       // Move Constructor
+       // string::string(string&& str)
+       std::string s(std::string("C++ by ") + std::string("example"));
+       std::cout << s << '\n'; // "C++ by example"
+    }
+    
+    
+    {
+        string s1("What is the sound of one clam napping?");    // constructor
+        string s2{"Anything worth doing is worth overdoing."};  // constructor with initializer list.
+        string s3("I saw Elvis in a UFO.");
+        //  std::string(str, pos, count)
+        string s4(s1, 0, 8);  // Copy the first 8 chars
+        // Copy 6 chars after the 15th character
+        string s5(s2, 15, 6);
+        // Copy from 6 till end
+        string s6(s3, 6);
+        cout << s4 << endl;
+        cout << s5 << endl;
+        cout << s6 << endl;
+        string quoteMe = s4 + "that" + s1.substr(20, 10) // substr copies 10 characters after the 20th
+                          + "with" + s3.substr(5, 100)   // copies 100 character or till EOS starting from 5.
+                          + s1.substr(37, 1);
+        cout << quoteMe << endl;  // "What is that one clam with Elvis in a UFO.?"
+    }
+    
+    
+    {
+        // Initialisation with string literal stops at the first occurance of NULL character.
+        string s1 = "ab\0\0cd";   // s1 contains "ab"
+        string s2{"ab\0\0cd", 6}; // s2 contains "ab\0\0cd"
+        string s3 = "ab\0\0cd"s;  // s3 contains "ab\0\0cd"   // this can be avoided using ""s operator
+        cout << s1 << endl;
+        cout << s2 << endl;
+        cout << s3 << endl;
+    }
+    
+    
+    {
+        // operator=
+        string s1;
+        string s2 {"alpha"};
+        
+        // copy
+        s1 = s2;
+        cout << quoted(s1) << " == " << quoted(s2) << endl;   // "alpha == alpha"
+        
+        // move
+        s1 = move(s2);
+        cout << s1 << " == " << s2 << endl;  // "alpha == alpha" or "alpha == "  unspecified behavior
+        
+        // const
+        string s3 = "beta";
+        s3 = '!';
+        string s4 = {'C','-','S','t','y','l','e'};
+        cout << s3 << " " << s4 << endl;
+    }
+    
+    
+    
+    {
+        int a = "99999";
+        string str = to_string(aaa);                                // to_string function is defined in the string class #include <string>
+        cout << "Integer converted to string" << saaa << endl;
+    }
+    
+    
+    {
+        // Input from user
+        
+        // getline
+        
+        // cin
+    }
     return 0;
 }
