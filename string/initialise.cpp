@@ -10,7 +10,12 @@
 #include <string>
 #include <iomanip>  // quoted()
 
-using namespace std;
+using std::cout;
+using std::cin;
+using std::endl;
+using std::string;
+using std::to_string;
+using namespace std::string_literals; // for operator ""s
 /*
  >>  c++ strings don't have a null terminator.
  >>  Though it is a sequence of characters.
@@ -118,9 +123,9 @@ int main() {
     
     
     {
-        int a = "99999";
-        string str = to_string(aaa);                                // to_string function is defined in the string class #include <string>
-        cout << "Integer converted to string" << saaa << endl;
+        int a = 99999;
+        string str = to_string(a);                                // to_string function is defined in the string class #include <string>
+        cout << "Integer converted to string" << str << endl;
     }
     
     
@@ -130,6 +135,24 @@ int main() {
         // getline
         
         // cin
+        
+        string s1, s2;
+        
+        cout << "Enter two names:\n";
+        cin >> s1 >> s2;  // this reads whitespaces seperated strings to s1 and s2
+        // Input =>  ajay singh then s1 will contain ajay and s2 will contain singh rather then the entire name in s1
+        // Input =>  ajay  s1 will contain ajay and wait for you to enter one more string for s2
+        cout << "You entered " << s1 << " and " << s2 << endl;
+        
+        
+        // But sometimes you might want to read strings with spaces in them.  e.g. ajay singh as a name.
+        // For that we have getline()
+        cout << "Enter two names:\n";
+        getline(cin, s1);
+        getline(cin, s2);
+        cout << " 1 > " << s1;
+        cout << " 2 > " << s2;
+        
     }
     return 0;
 }
