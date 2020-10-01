@@ -17,6 +17,13 @@ using namespace std;
 */
 int main() {
     {
+        string s = "Hello"; // lvalue of type 'const char [6]'  6 because it has a null character at the end
+        // But the string object won't have the null character.
+        
+        //int i = "HELLO"; // Cannot initialize a variable of type 'int' with an lvalue of type 'const char [6]'
+    }
+    
+    {
         // Using a character
         string s1{1, 'a'};
         string s2(4, '=');
