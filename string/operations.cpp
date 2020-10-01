@@ -6,6 +6,12 @@
 //  Copyright © 2020 Ajay Singh. All rights reserved.
 //
 
+/*
+String Operators
+ +, <, >, +=, ==, !=, <<, >>
+*/
+
+
 #include <iostream>
 #include <string>
 #include <iomanip>
