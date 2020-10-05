@@ -144,6 +144,8 @@ int main() {
         // Input =>  ajay  s1 will contain ajay and wait for you to enter one more string for s2
         cout << "You entered " << s1 << " and " << s2 << endl;
         
+        cin.clear();
+        fflush(stdin);
         
         // But sometimes you might want to read strings with spaces in them.  e.g. ajay singh as a name.
         // For that we have getline()
