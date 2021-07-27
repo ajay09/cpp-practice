@@ -235,7 +235,8 @@ void abAppend(struct abuf *ab, const char *s, int len) {
 
 // is a destructor that deallocates the dynamic memory used by an abuf.
 void abFree(struct abuf *ab) {
-    free(ab->b);
+    if (ab->b != NULL)
+        free(ab->b);
 }
 
 
@@ -265,13 +266,15 @@ void editorProcessKeypress() {
 // We will render the editor's user interface to the screen after each keypress. 
 
 // draws a column of tildes on the left hand side of the screen like vim
-void editorDrawRows() {
+void editorDrawRows(struct abuf *ab) {
     int y;
     for (y = 0; y < E.screenrows; y++) {
-        write(STDOUT_FILENO, "~", 1);
+        abAppend(ab, "~", 1);
+        // write(STDOUT_FILENO, "~", 1);
 
         if (y < E.screenrows - 1) {      // so that we do not go to next line after printing the ~ on the last line.
-            write(STDOUT_FILENO, "\r\n", 2);
+            abAppend(ab, "\r\n", 2);
+            // write(STDOUT_FILENO, "\r\n", 2);
         }
     }
 }
@@ -279,13 +282,22 @@ void editorDrawRows() {
 
 // For this we'll start by clearing the screen
 void editorRefreshScreen() {
+    struct abuf ab = ABUF_INIT;     // initialize a new abuf
+
     // write() and STDOUT_FILENO come from <unistd.h>
-    write(STDOUT_FILENO, "\x1b[2J", 4); // clear the screen
-    write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor
+    abAppend(&ab, "\x1b[2J", 4);
+    // write(STDOUT_FILENO, "\x1b[2J", 4); // clear the screen
+    abAppend(&ab, "\x1b[H", 3);
+    // write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor
 
-    editorDrawRows();
+    editorDrawRows(&ab);
 
-    write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor    
+    abAppend(&ab, "\x1b[H", 3);
+    // write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor    
+
+    // In the end write the ab to std out
+    write(STDOUT_FILENO, ab.b, ab.len);
+    abFree(&ab);
 }
 
 
