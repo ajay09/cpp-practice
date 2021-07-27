@@ -272,6 +272,8 @@ void editorDrawRows(struct abuf *ab) {
         abAppend(ab, "~", 1);
         // write(STDOUT_FILENO, "~", 1);
 
+        abAppend(ab, "\x1b[K", 3);  // The K command erases part of the current line.
+                                    // 0 is the default argument, erases the part of the line to the right of the cursor.
         if (y < E.screenrows - 1) {      // so that we do not go to next line after printing the ~ on the last line.
             abAppend(ab, "\r\n", 2);
             // write(STDOUT_FILENO, "\r\n", 2);
@@ -286,7 +288,8 @@ void editorRefreshScreen() {
 
     abAppend(&ab, "\x1b[?25l", 6); // hide the cursor before refreshing the screen
     // write() and STDOUT_FILENO come from <unistd.h>
-    abAppend(&ab, "\x1b[2J", 4);
+    // abAppend(&ab, "\x1b[2J", 4); // don't clear the entire screen at once. clear each line as we refresh it.
+                                    // clear line added in editorDrawRows()
     // write(STDOUT_FILENO, "\x1b[2J", 4); // clear the screen
     abAppend(&ab, "\x1b[H", 3);
     // write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor
