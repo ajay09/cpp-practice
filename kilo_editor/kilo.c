@@ -5,18 +5,35 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
+#include <errno.h>
 
 struct termios orig_termios;
 
-void disableRawMode() {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
-    // To reset the terminal to its original settings
+
+// Prints the error message and exits.
+void die(const char *s) {
+  perror(s);  // perror() comes from <stdio.h>, and exit() comes from <stdlib.h>.
+  exit(1);
+  // Most C library functions that fail will set the global errno variable to indicate what the error was. 
+  // perror() looks at the global errno variable and prints a descriptive error message for it. 
+  // It also prints the string given to it before it prints the error message, which is meant to 
+  // provide context about what part of your code caused the error.
 }
+
+
+// To reset the terminal to its original settings
+void disableRawMode() {
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+        die("tcsetattr");
+    // tcsetattr(), tcgetattr(), and read() all return -1 on failure, and set the errno value to indicate the error.
+}
+
 
 // Enable raw mode : input is taken as you press a key and not wait for you to press enter
 //                 : disable various control flags as they should not work in a text editor
 void enableRawMode() {
-    tcgetattr(STDIN_FILENO, &orig_termios);  // get the attributes
+    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)  // get the attributes
+        die("tcgetattr");
     atexit(disableRawMode); // register callback
 
     struct termios raw = orig_termios;
@@ -80,15 +97,25 @@ void enableRawMode() {
     // What if we want to do something like animate something on the screen while waiting for user input? 
     // We can set a timeout, so that read() returns if it doesn’t get any input for a certain amount of time.
 
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);  // set the attributes with updated flags
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)  // set the attributes with updated flags
+        die("tcsetattr");;
 }
+
+// When tcgetattr() fails
+// An easy way to make tcgetattr() fail is to give your program a text file or a pipe as the standard input instead 
+//    of your terminal. To give it a file as standard input, run ./kilo <kilo.c. 
+// To give it a pipe, run echo test | ./kilo. Both should result in the same error from tcgetattr(), 
+//    something like Inappropriate ioctl for device
+
 
 int main() {
     enableRawMode();
 
     while (1) {
         char c = '\0';
-        read(STDIN_FILENO, &c, 1); // read 1 byte from std input to variable c
+                                            // errno.h
+        if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) // read 1 byte from std input to variable c
+            die("read");
         // If read times out it will return 0.
 
         if (iscntrl(c)) { // iscntrl() tests whether a character is a control character. 
