@@ -10,9 +10,17 @@
 #include <errno.h>
 
 
+
+/*** defines ***/
+
+#define CTRL_KEY(k) (0x1f & (k))  // Press Ctrl-Q to quit
+
+
+
 /*** data ***/
 
 struct termios orig_termios;
+
 
 
 /*** terminal ***/
@@ -115,6 +123,8 @@ void enableRawMode() {
 //    something like Inappropriate ioctl for device
 
 
+
+
 /*** init ***/
 
 int main() {
@@ -133,7 +143,7 @@ int main() {
             printf("%d ('%c')\r\n", c, c);  // fun => try replacing \r and \n
         }
 
-        if (c == 'q') break;
+        if (c == CTRL_KEY('q')) break;
     }
 
     return 0;
