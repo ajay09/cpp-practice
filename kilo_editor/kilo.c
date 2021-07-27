@@ -1,5 +1,7 @@
 // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
 
+/*** includes ***/
+
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -7,8 +9,13 @@
 #include <unistd.h>
 #include <errno.h>
 
+
+/*** data ***/
+
 struct termios orig_termios;
 
+
+/*** terminal ***/
 
 // Prints the error message and exits.
 void die(const char *s) {
@@ -107,6 +114,8 @@ void enableRawMode() {
 // To give it a pipe, run echo test | ./kilo. Both should result in the same error from tcgetattr(), 
 //    something like Inappropriate ioctl for device
 
+
+/*** init ***/
 
 int main() {
     enableRawMode();
