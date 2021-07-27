@@ -1,4 +1,5 @@
 // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
+// use reset to reset the attributes of your terminal
 
 /*** includes ***/
 
@@ -8,6 +9,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/ioctl.h> // to get terminal window size
 
 
 
@@ -19,8 +21,13 @@
 
 /*** data ***/
 
-struct termios orig_termios;
+struct editorConfig {
+    int screenrows;
+    int screencols;
+    struct termios orig_termios;
+};
 
+struct editorConfig E;
 
 
 /*** terminal ***/
@@ -42,7 +49,7 @@ void die(const char *s) {
 
 // To reset the terminal to its original settings
 void disableRawMode() {
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
         die("tcsetattr");
     // tcsetattr(), tcgetattr(), and read() all return -1 on failure, and set the errno value to indicate the error.
 }
@@ -51,11 +58,11 @@ void disableRawMode() {
 // Enable raw mode : input is taken as you press a key and not wait for you to press enter
 //                 : disable various control flags as they should not work in a text editor
 void enableRawMode() {
-    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)  // get the attributes
+    if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1)  // get the attributes
         die("tcgetattr");
     atexit(disableRawMode); // register callback
 
-    struct termios raw = orig_termios;
+    struct termios raw = E.orig_termios;
     raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);
     raw.c_oflag &= ~(OPOST);
     raw.c_cflag |= (CS8);
@@ -131,7 +138,7 @@ void enableRawMode() {
 // editorReadKey()’s job is to wait for one keypress, and return it. 
 // Later, we’ll expand this function to handle escape sequences, 
 //  which involves reading multiple bytes that represent a single keypress, as is the case with the arrow keys.
-char editorReadkey() {
+char editorReadKey() {
     int nread;
     char c;
     // If read times out it will return 0.
@@ -145,6 +152,52 @@ char editorReadkey() {
 // Note that editorReadKey() belongs in the /*** terminal ***/ section because it deals with low-level terminal input
 
 
+int getCursorPosition(int *rows, int *cols) {
+    char buf[32];
+    unsigned int i = 0;
+    if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1;
+    while (i < sizeof(buf) - 1) {
+        if (read(STDIN_FILENO, &buf[i], 1) != 1) break;
+        if (buf[i] == 'R') break;
+        i++;
+    }
+    buf[i] = '\0';
+    if (buf[0] != '\x1b' || buf[1] != '[') return -1;
+    if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) return -1;
+    return 0;
+    // printf("\r\n&buf[1]: '%s'\r\n", &buf[1]);
+    // we’ve inserted a temporary call to editorReadKey() to let us observe our debug output before 
+    // the screen gets cleared on exit.
+    // editorReadKey();
+    // return -1;
+}
+
+// If ioctl() failed in either way, we have getWindowSize() report failure by returning -1. 
+// If it succeeded, we pass the values back by setting the int references that were passed to the function.
+// This is a common approach to having functions return multiple values in C. 
+// It also allows you to use the return value to indicate success or failure.
+int getWindowSize(int *rows, int *cols) {
+    struct winsize ws;
+
+    // ioctl(), TIOCGWINSZ, and struct winsize come from <sys/ioctl.h>.
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+        if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) // move the cursor to the bottom right position
+            return -1;
+        return getCursorPosition(rows, cols);
+    } else {
+        *cols = ws.ws_col;
+        *rows = ws.ws_row;
+        return 0;
+    }
+
+    // ioctl() isn’t guaranteed to be able to request the window size on all systems, 
+    // so we are going to provide a fallback method of getting the window size.
+
+    // The strategy is to position the cursor at the bottom-right of the screen, 
+    // then use escape sequences that let us query the position of the cursor. 
+    // That tells us how many rows and columns there must be on the screen.
+}
+
 
 
 /*** input ***/
@@ -153,7 +206,7 @@ char editorReadkey() {
 //  Later, it will map various Ctrl key combinations and other special keys to different editor functions, 
 //  and insert any alphanumeric and other printable keys’ characters into the text that is being edited.
 void editorProcessKeypress() {
-    char c = editorReadkey();
+    char c = editorReadKey();
 
     switch (c) {
         case CTRL_KEY('q'):
@@ -171,12 +224,29 @@ void editorProcessKeypress() {
 /*** output ***/
 
 // We will render the editor's user interface to the screen after each keypress. 
-// For this we'll start by clearing the screen
 
+// draws a column of tildes on the left hand side of the screen like vim
+void editorDrawRows() {
+    int y;
+    for (y = 0; y < E.screenrows; y++) {
+        write(STDOUT_FILENO, "~", 1);
+
+        if (y < E.screenrows - 1) {      // so that we do not go to next line after printing the ~ on the last line.
+            write(STDOUT_FILENO, "\r\n", 2);
+        }
+    }
+}
+
+
+// For this we'll start by clearing the screen
 void editorRefreshScreen() {
     // write() and STDOUT_FILENO come from <unistd.h>
     write(STDOUT_FILENO, "\x1b[2J", 4); // clear the screen
     write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor
+
+    editorDrawRows();
+
+    write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor    
 }
 
 
@@ -186,8 +256,14 @@ void editorRefreshScreen() {
 
 /*** init ***/
 
+void initEditor() {
+    if (getWindowSize(&E.screenrows, &E.screencols) == -1)
+        die("getWindowSize");
+}
+
 int main() {
     enableRawMode();
+    initEditor();
 
     while (1) {
         editorRefreshScreen();
