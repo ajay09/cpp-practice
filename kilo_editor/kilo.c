@@ -25,6 +25,7 @@
 /*** data ***/
 
 struct editorConfig {
+    int cx, cy; // we want user to be able to move cursor around. Thus we need to keep track of cursor in a global state.
     int screenrows;
     int screencols;
     struct termios orig_termios;
@@ -244,6 +245,24 @@ void abFree(struct abuf *ab) {
 
 /*** input ***/
 
+void editorMoveCursor(char key) {
+    switch(key) {
+        case 'a':
+            E.cx--;
+            break;
+        case 'd':
+            E.cx++;
+            break;
+        case 'w':
+            E.cy--;
+            break;
+        case 's':
+            E.cy++;
+            break;
+    }
+}
+
+
 // editorProcessKeypress() waits for a keypress, and then handles it. 
 //  Later, it will map various Ctrl key combinations and other special keys to different editor functions, 
 //  and insert any alphanumeric and other printable keys’ characters into the text that is being edited.
@@ -256,6 +275,12 @@ void editorProcessKeypress() {
             write(STDOUT_FILENO, "\x1b[2J", 4);
             write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
+            break;
+        case 'a':
+        case 'w':
+        case 'd':
+        case 's':
+            editorMoveCursor(c);
             break;
     }
 }
@@ -311,7 +336,14 @@ void editorRefreshScreen() {
 
     editorDrawRows(&ab);
 
-    abAppend(&ab, "\x1b[H", 3);
+    char buf[32];
+    // We add 1 to E.cy and E.cx to convert from 0-indexed values to the 1-indexed values that the terminal uses.
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);  // use this instead of abAppend(&ab, "\x1b[H", 3);
+                                                                    // We changed the old H command into an H command with arguments, 
+                                                                    // specifying the exact position we want the cursor to move to
+    abAppend(&ab, buf, strlen(buf));
+
+    // abAppend(&ab, "\x1b[H", 3);
     // write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor   
     abAppend(&ab, "\x1b[?25h", 6);  // unhide the cursor after refresh finishes.
 
@@ -328,6 +360,8 @@ void editorRefreshScreen() {
 /*** init ***/
 
 void initEditor() {
+    E.cx = E.cy = 0;
+
     if (getWindowSize(&E.screenrows, &E.screencols) == -1)
         die("getWindowSize");
 }
