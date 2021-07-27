@@ -280,16 +280,24 @@ void abFree(struct abuf *ab) {
 void editorMoveCursor(int key) {
     switch(key) {
         case ARROW_LEFT:
-            E.cx--;
+            if (E.cx != 0) {
+                E.cx--;
+            }
             break;
         case ARROW_RIGHT:
-            E.cx++;
+            if (E.cx != E.screencols - 1) {
+                E.cx++;
+            }
             break;
         case ARROW_UP:
-            E.cy--;
+            if (E.cy != 0) {
+                E.cy--;
+            }
             break;
         case ARROW_DOWN:
-            E.cy++;
+            if (E.cy != E.screenrows - 1) {
+                E.cy++;
+            }
             break;
     }
 }
@@ -370,7 +378,7 @@ void editorRefreshScreen() {
 
     char buf[32];
     // We add 1 to E.cy and E.cx to convert from 0-indexed values to the 1-indexed values that the terminal uses.
-    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);  // use this instead of abAppend(&ab, "\x1b[H", 3);
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 3);  // use this instead of abAppend(&ab, "\x1b[H", 3);
                                                                     // We changed the old H command into an H command with arguments, 
                                                                     // specifying the exact position we want the cursor to move to
     abAppend(&ab, buf, strlen(buf));
