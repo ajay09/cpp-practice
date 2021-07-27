@@ -27,12 +27,16 @@ struct termios orig_termios;
 
 // Prints the error message and exits.
 void die(const char *s) {
-  perror(s);  // perror() comes from <stdio.h>, and exit() comes from <stdlib.h>.
-  exit(1);
-  // Most C library functions that fail will set the global errno variable to indicate what the error was. 
-  // perror() looks at the global errno variable and prints a descriptive error message for it. 
-  // It also prints the string given to it before it prints the error message, which is meant to 
-  // provide context about what part of your code caused the error.
+    // clear the screen on exit
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
+
+    perror(s);  // perror() comes from <stdio.h>, and exit() comes from <stdlib.h>.
+    exit(1);
+    // Most C library functions that fail will set the global errno variable to indicate what the error was. 
+    // perror() looks at the global errno variable and prints a descriptive error message for it. 
+    // It also prints the string given to it before it prints the error message, which is meant to 
+    // provide context about what part of your code caused the error.
 }
 
 
@@ -153,10 +157,28 @@ void editorProcessKeypress() {
 
     switch (c) {
         case CTRL_KEY('q'):
+            // clear the screen while exiting.
+            write(STDOUT_FILENO, "\x1b[2J", 4);
+            write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
             break;
     }
 }
+
+
+
+
+/*** output ***/
+
+// We will render the editor's user interface to the screen after each keypress. 
+// For this we'll start by clearing the screen
+
+void editorRefreshScreen() {
+    // write() and STDOUT_FILENO come from <unistd.h>
+    write(STDOUT_FILENO, "\x1b[2J", 4); // clear the screen
+    write(STDOUT_FILENO, "\x1b[H", 3);  // reposition the cursor
+}
+
 
 
 // printf("%d\r\n", c); // since we turned off automatic  \n => \r\n  translation. Thus we have to supply \r
@@ -168,6 +190,7 @@ int main() {
     enableRawMode();
 
     while (1) {
+        editorRefreshScreen();
         editorProcessKeypress();
     }
 
