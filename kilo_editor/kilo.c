@@ -69,19 +69,35 @@ void enableRawMode() {
     
     // BRKINT, INPCK, ISTRIP, and CS8 are some other flags that are turned off for modern termials by default.
 
+
+    raw.c_cc[VMIN] = 0; 
+    // The VMIN value sets the minimum number of bytes of input needed before read() can return. 
+    // We set it to 0 so that read() returns as soon as there is any input to be read.
+    raw.c_cc[VTIME] = 1;
+    // The VTIME value sets the maximum amount of time to wait before read() returns. It is in 1/10 of a second
+
+    // Currently, read() will wait indefinitely for input from the keyboard before it returns. 
+    // What if we want to do something like animate something on the screen while waiting for user input? 
+    // We can set a timeout, so that read() returns if it doesn’t get any input for a certain amount of time.
+
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);  // set the attributes with updated flags
 }
 
 int main() {
     enableRawMode();
 
-    char c;
-    while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+    while (1) {
+        char c = '\0';
+        read(STDIN_FILENO, &c, 1); // read 1 byte from std input to variable c
+        // If read times out it will return 0.
+
         if (iscntrl(c)) { // iscntrl() tests whether a character is a control character. 
             printf("%d\r\n", c); // since we turned off automatic  \n => \r\n  translation. Thus we have to supply \r
         } else {
             printf("%d ('%c')\r\n", c, c);  // fun => try replacing \r and \n
         }
+
+        if (c == 'q') break;
     }
 
     return 0;
