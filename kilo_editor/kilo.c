@@ -21,6 +21,15 @@
 #define CTRL_KEY(k) (0x1f & (k))  // Press Ctrl-Q to quit
 
 
+// choose a representation for arrow keys that doesn’t conflict with w,a,s,d
+enum editorKey {
+  ARROW_LEFT = 1000, //'a',
+  ARROW_RIGHT,       //'d',
+  ARROW_UP,          //'w',
+  ARROW_DOWN         //'s'
+};
+
+
 
 /*** data ***/
 
@@ -142,7 +151,7 @@ void enableRawMode() {
 // editorReadKey()’s job is to wait for one keypress, and return it. 
 // Later, we’ll expand this function to handle escape sequences, 
 //  which involves reading multiple bytes that represent a single keypress, as is the case with the arrow keys.
-char editorReadKey() {
+int editorReadKey() {
     int nread;
     char c;
     // If read times out it will return 0.
@@ -151,7 +160,30 @@ char editorReadKey() {
         if (nread == -1 && errno != EAGAIN)
             die("read");
     }
-    return c;
+
+    // If we read an escape character, we immediately read two more bytes into the seq buffer. 
+    // If either of these reads time out (after 0.1 seconds), then we assume the user just pressed the Escape key 
+    //   and return that.
+    if (c == '\x1b') {
+        char seq[3];
+
+        if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
+        if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
+
+        if (seq[0] == '[') {
+            switch (seq[1]) {
+                // We have basically aliased the arrow keys to the w,a,s,d keys
+                //  ARROW_UP, ARROW_LEFT, ARROW_DOWN, and ARROW_RIGHT.
+                case 'A': return ARROW_UP;
+                case 'B': return ARROW_DOWN;
+                case 'C': return ARROW_RIGHT;
+                case 'D': return ARROW_LEFT;
+            }
+        }
+        return '\x1b';
+    } else {
+        return c;
+    }
 }
 // Note that editorReadKey() belongs in the /*** terminal ***/ section because it deals with low-level terminal input
 
@@ -245,18 +277,18 @@ void abFree(struct abuf *ab) {
 
 /*** input ***/
 
-void editorMoveCursor(char key) {
+void editorMoveCursor(int key) {
     switch(key) {
-        case 'a':
+        case ARROW_LEFT:
             E.cx--;
             break;
-        case 'd':
+        case ARROW_RIGHT:
             E.cx++;
             break;
-        case 'w':
+        case ARROW_UP:
             E.cy--;
             break;
-        case 's':
+        case ARROW_DOWN:
             E.cy++;
             break;
     }
@@ -267,7 +299,7 @@ void editorMoveCursor(char key) {
 //  Later, it will map various Ctrl key combinations and other special keys to different editor functions, 
 //  and insert any alphanumeric and other printable keys’ characters into the text that is being edited.
 void editorProcessKeypress() {
-    char c = editorReadKey();
+    int c = editorReadKey();
 
     switch (c) {
         case CTRL_KEY('q'):
@@ -276,10 +308,10 @@ void editorProcessKeypress() {
             write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
             break;
-        case 'a':
-        case 'w':
-        case 'd':
-        case 's':
+        case ARROW_LEFT:
+        case ARROW_RIGHT:
+        case ARROW_UP:
+        case ARROW_DOWN:
             editorMoveCursor(c);
             break;
     }
@@ -377,3 +409,17 @@ int main() {
 
     return 0;
 }
+
+
+/*
+That concludes our arrow key handling code. At this point, it can be fun to try entering an escape sequence 
+manually while the program runs. Try pressing the Escape key, the [ key, and Shift+C in sequence really fast, 
+and you may see your keypresses being interpreted as the right arrow key being pressed. 
+You have to be pretty fast to do it, so you may want to adjust the VTIME value in enableRawMode() temporarily, 
+to make it easier. 
+(It also helps to know that pressing Ctrl-[ is the same as pressing the Escape key, for 
+the same reason that Ctrl-M is the same as pressing Enter: Ctrl clears the 6th and 7th bits of the character 
+you type in combination with it.)
+*/
+
+
