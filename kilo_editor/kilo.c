@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/ioctl.h> // to get terminal window size
+#include <string.h>
 
 
 
@@ -198,6 +199,44 @@ int getWindowSize(int *rows, int *cols) {
     // That tells us how many rows and columns there must be on the screen.
 }
 
+
+
+
+/*** append buffer ***/
+/*
+It’s not a good idea to make a whole bunch of small write()’s every time we refresh the screen. 
+It would be better to do one big write(), to make sure the whole screen updates at once. 
+Otherwise there could be small unpredictable pauses between write()’s, which would cause an annoying flicker effect.
+
+We want to replace all our write() calls with code that appends the string to a buffer, and then write() 
+this buffer out at the end. Unfortunately, C doesn’t have dynamic strings, so we’ll create our own 
+dynamic string type that supports one operation: appending.
+*/
+struct abuf {
+    char *b; // a pointer to our buffer in memory
+    int len; // length
+};
+
+// Acts as a constructor for abuf type
+#define ABUF_INIT {NULL, 0} // constant which represents an empty buffer
+
+// realloc() and free() come from <stdlib.h>. memcpy() comes from <string.h>.
+void abAppend(struct abuf *ab, const char *s, int len) {
+    // gives us a block of memory that is the size of the current string plus the string we are appending
+    // realloc will either extend the size of the block or free it and allocate a new one of required size.
+    char *new = realloc(ab->b, ab->len + len);  // Changes the size of the memory block pointed to by ptr.
+
+    if (new == NULL) return;
+    // memcopy to copy the string s after the end of the current data in the buffer
+    memcpy(&new[ab->len], s, len);
+    ab->b = new;
+    ab->len += len;
+}
+
+// is a destructor that deallocates the dynamic memory used by an abuf.
+void abFree(struct abuf *ab) {
+    free(ab->b);
+}
 
 
 /*** input ***/
